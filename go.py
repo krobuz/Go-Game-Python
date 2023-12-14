@@ -63,7 +63,7 @@ class Stone(object):
 
     def __str__(self):
         """Return the location of the stone, e.g. 'D17'."""
-        return 'ABCDEFGHJKLMNOPQRST'[self.point[0]-1] + str(20-(self.point[1]))
+        return 'ABCDEFGHJ'[self.point[0]-1] + str(9-(self.point[1]))
 
 
 class Group(object):

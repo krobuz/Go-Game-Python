@@ -34,7 +34,7 @@ class Board(go.Board):
     def __init__(self):
         """Create, initialize and draw an empty board."""
         super(Board, self).__init__()
-        self.size = 8 
+        self.size = 9
         self.outline = pygame.Rect(45, 45, 320, 320)
         self.draw()
 
@@ -71,17 +71,16 @@ class Board(go.Board):
 
     def is_valid_move(self, move):
         x, y = move
-        return 0 <= x < self.size and 0 <= y < self.size and not self.search(point=move)
+        return 1 <= x <= self.size and 1 <= y <= self.size and not self.search(point=move)
     
     def is_game_over(self):
         game_over = not any(self.is_valid_move((i, j)) for i in range(self.size) for j in range(self.size))
         if game_over:
-            pygame.time.delay(1000)  # Wait for 1 second to display the popup
-            pygame.display.set_mode((300, 100))  # Set a small window for the popup
-            pygame.display.set_caption("Game Over")
+            pygame.time.delay(250)  # Wait for 1 second to display the popup
+            pygame.display.set_mode((450,300))  # Set a small window for the popup
             font = pygame.font.Font(None, 36)
-            text = font.render("Game Over!", True, (255, 0, 0))
-            text_rect = text.get_rect(center=(150, 150))
+            text = font.render("Game Over!", True, (255, 128, 0))
+            text_rect = text.get_rect(center=(220, 150))
             pygame.display.get_surface().blit(text, text_rect)
             pygame.display.flip()
             pygame.time.delay(3000)  # Display the popup for 3 seconds
@@ -117,12 +116,12 @@ class Computer:
         if legal_moves:
             move = random.choice(legal_moves)
             added_computer_stone = Stone(self.board, move, self.color)
-            self.board.update_liberties(added_computer_stone)
+            board.update_liberties(added_computer_stone)
 
     def get_legal_moves(self):
         legal_moves = []
-        for i in range(8):
-            for j in range(8):
+        for i in range(10):
+            for j in range(10):
                 if self.board.is_valid_move((i, j)):
                     legal_moves.append((i, j))
         return legal_moves
@@ -134,7 +133,7 @@ def main():
 
     currentP = computer_player
     while True:
-        pygame.time.wait(250)
+        pygame.time.wait(300)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
@@ -151,7 +150,7 @@ def main():
 
 if __name__ == '__main__':
     pygame.init()
-    pygame.display.set_caption('Goban')
+    pygame.display.set_caption('Cờ Vây')
     screen = pygame.display.set_mode(BOARD_SIZE, 0, 32)
     background = pygame.image.load(BACKGROUND).convert()
     board = Board()
