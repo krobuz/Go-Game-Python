@@ -1,13 +1,15 @@
 
 
 import random
+import time
 import pygame
 import go
 from sys import exit
 
-FPS = 30
+FPS = 0
+TIMEOUT_SECONDS = 5
 
-BACKGROUND = 'images/board_image.jpg'
+BACKGROUND = 'images/board_image.png'
 BOARD_SIZE = (410, 410)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -80,7 +82,24 @@ class Board(go.Board):
         screen.blit(background, (0, 0))
         pygame.display.update()
 
+    def make_temporary_move(self, move, color):
+        x, y = move
+        if self.is_valid_move(move):
+            stone = Stone(self, move, color)
+            self.update_liberties(stone)  # Update liberties for the new stone
+            self.next = BLACK if color == WHITE else WHITE  # Switch the turn
+        # else:
+        #     raise ValueError("Invalid move: {}".format(move))
 
+    def undo_temporary_move(self, move):
+        x, y = move
+        stone = self.search(point=move)
+        if stone:
+            stone.remove()  # Remove the stone from the board
+            self.next = BLACK if stone.color == WHITE else WHITE  # Switch back the turn
+        # else:
+        #     raise ValueError("No stone found at position: {}".format(move))
+            
 
     def update_liberties(self, added_stone=None):
         """Updates the liberties of the entire board, group by group.
@@ -105,14 +124,14 @@ class Board(go.Board):
     def is_game_over(self):
         game_over = not any(self.is_valid_move((i, j)) for i in range(self.size) for j in range(self.size))
         if game_over:
-            pygame.time.delay(250)  # Wait for 1 second to display the popup
+            pygame.time.delay(500)  # Wait for 0.5 second to display the popup
             pygame.display.set_mode((450,300))  # Set a small window for the popup
             font = pygame.font.Font(None, 36)
-            text = font.render("Game Over!", True, (255, 128, 0))
+            text = font.render("Game Over!", True, (255, 30, 70))
             text_rect = text.get_rect(center=(220, 150))
             pygame.display.get_surface().blit(text, text_rect)
             pygame.display.flip()
-            pygame.time.delay(5000)  # Display the popup for 5 seconds
+            pygame.time.delay(1000)  # Display the popup for 1 seconds
             exit()
         return game_over
 
@@ -134,24 +153,138 @@ class Human:
                 self.board.update_liberties(added_stone)  
 
 class Computer:
-    def __init__(self, board, color):
+    def __init__(self, board, color, max_depth = 2):
         self.board = board
         self.color = color
+        self.max_depth = max_depth
+        self.last_move = None
+
+    def get_opponent_color(self):
+        return BLACK if self.color == WHITE else BLACK
+    
+    # def make_move(self):
+    #     legal_moves = self.get_legal_moves()
+    #     if legal_moves:
+    #         #move = random.choice(legal_moves)    
+    #         best_move = self.minimax(self.max_depth, True)[1]
+    #         while best_move == self.last_move:
+    #             best_move = self.minimax(self.max_depth, True)[1]
+                
+    #         added_computer_stone = Stone(self.board, best_move, self.color)
+    #         print("AI move: " + str(added_computer_stone))
+    #         self.last_move = best_move
+    #         board.update_liberties(added_computer_stone)
+    #     else:
+    #         print("No legal moves for the computer.")
 
     def make_move(self):
+        start_time = time.time()
+        legal_moves = self.get_legal_moves()
+
+        if legal_moves:
+            best_move = self.minimax_with_timeout(self.max_depth-1, True, start_time)
+
+            if best_move is not None:
+                added_computer_stone = Stone(self.board, best_move, self.color)
+                print("AI move: " + str(added_computer_stone))
+                self.last_move = best_move
+                self.board.update_liberties(added_computer_stone)
+            else:
+                print("Random move due to timeout.")
+                self.make_random_move()
+        else:
+            print("No legal moves for the computer.")
+
+    def make_random_move(self):
         legal_moves = self.get_legal_moves()
         if legal_moves:
-            move = random.choice(legal_moves)
-            added_computer_stone = Stone(self.board, move, self.color)
-            print("AI move: " + str(added_computer_stone))
-            board.update_liberties(added_computer_stone)
+            random_move = random.choice(legal_moves)
+            added_computer_stone = Stone(self.board, random_move, self.color)
+            print("Random move: " + str(added_computer_stone))
+            self.last_move = random_move
+            self.board.update_liberties(added_computer_stone)
+        else:
+            print("No legal moves for the computer.")
+    def minimax_with_timeout(self, depth, maximizing_player, start_time):
+        max_eval = float('-inf')
+        best_move = None
 
+        legal_moves = self.get_legal_moves()
+
+        for move in legal_moves:
+            self.board.make_temporary_move(move, self.get_opponent_color())
+            eval, _ = self.minimax(depth - 1, False)
+            self.board.undo_temporary_move(move)
+
+            if eval > max_eval:
+                max_eval = eval
+                best_move = move
+
+            # Check if time limit has been exceeded
+            elapsed_time = time.time() - start_time
+            if elapsed_time > TIMEOUT_SECONDS:
+                return None
+
+        return best_move
+    
+    def minimax(self, depth, maximizing_player):
+        if depth == 0 or self.board.is_game_over():
+            return self.evaluate_board(), None
+
+        legal_moves = self.get_legal_moves()
+
+        if maximizing_player:
+            max_eval = float('-inf')
+            best_move = None
+            for move in legal_moves:
+                self.board.make_temporary_move(move, self.get_opponent_color())
+                eval, _ = self.minimax(depth - 1, False)
+                self.board.undo_temporary_move(move)
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            best_move = None
+            for move in legal_moves:
+                self.board.make_temporary_move(move, self.color)
+                eval, _ = self.minimax(depth - 1, True)
+                self.board.undo_temporary_move(move)
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = move
+            return min_eval, best_move
+
+    def evaluate_board(self):
+        computer = 0
+        human = 0
+
+        for group in self.board.groups:
+            if group.stones and group.stones[0].color == self.color:
+                computer += 1
+                if len(group.liberties) == 1:
+                    # Penalty for a group with only one liberty
+                    computer -= 0.5  # Adjust the penalty as needed
+            elif group.stones and group.stones[0].color == self.get_opponent_color():
+                human += 1
+
+        return computer - human
+    
+    def is_suicide_move(self, move):
+        # Check if making the move would result in the computer's group having zero liberties
+        self.board.make_temporary_move(move, self.color)
+        is_suicide = len(self.board.groups[-1].liberties) == 0
+        self.board.undo_temporary_move(move)
+        return is_suicide
+    
     def get_legal_moves(self):
         legal_moves = []
-        for i in range(10):
-            for j in range(10):
-                if self.board.is_valid_move((i, j)):
-                    legal_moves.append((i, j))
+        for i in range(self.board.size):
+            for j in range(self.board.size):
+                move = (i, j)
+                if self.board.is_valid_move(move) and not self.is_suicide_move(move):
+                    legal_moves.append(move)
         return legal_moves
 
 def main():
@@ -163,7 +296,6 @@ def main():
     currentP = human_player
     while True:
         clock.tick(FPS)
-
         pygame.time.wait(250)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -174,7 +306,7 @@ def main():
                         human_player.make_move(event)
                         currentP = computer_player
                 else:
-                    #pygame.time.wait(500)
+                    #pygame.time.wait(250)
                     computer_player.make_move()
                     currentP = human_player
 
