@@ -1,9 +1,13 @@
+
+
 import random
 import pygame
 import go
 from sys import exit
 
-BACKGROUND = 'images/ramin.jpg'
+FPS = 30
+
+BACKGROUND = 'images/board_image.jpg'
 BOARD_SIZE = (410, 410)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -18,7 +22,7 @@ class Stone(go.Stone):
 
     def draw(self):
         """Draw the stone as a circle."""
-        pygame.draw.circle(screen, self.color, self.coords, 17, 0)
+        pygame.draw.circle(screen, self.color, self.coords, 18, 0)
         pygame.display.update()
 
     def remove(self):
@@ -38,8 +42,19 @@ class Board(go.Board):
         self.outline = pygame.Rect(45, 45, 320, 320)
         self.draw()
 
-    def draw(self):
 
+    #hiển thị bàn cờ
+    def draw(self):
+        """Draw the board to the background and blit it to the screen.
+
+        The board is drawn by first drawing the outline, then the 19x19
+        grid and finally by adding hoshi to the board. All these
+        operations are done with pygame's draw functions.
+
+        This method should only be called once, when initializing the
+        board.
+
+        """
         pygame.draw.rect(background, BLACK, self.outline, 3)
         # Outline is inflated here for future use as a collidebox for the mouse
         self.outline.inflate_ip(20, 20)
@@ -50,9 +65,22 @@ class Board(go.Board):
         for i in range(2):
             for j in range(2):
                 coords = (125 + (160 * i), 125 + (160 * j))
-                pygame.draw.circle(background, BLACK, coords, 3, 0)
+                pygame.draw.circle(background, BLACK, coords, 5, 0)
+        for i in range(9):
+            font = pygame.font.Font(None, 18)
+            text = font.render(str(i + 1), True, BLACK)
+            text_rect = text.get_rect(center=(20, 45 + i * 40))
+            background.blit(text, text_rect)
+        letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J']
+        for i in range(9):
+            font = pygame.font.Font(None, 18)
+            text = font.render(letters[i], True, BLACK)
+            text_rect = text.get_rect(center=(45 + i * 40, 20))
+            background.blit(text, text_rect)
         screen.blit(background, (0, 0))
         pygame.display.update()
+
+
 
     def update_liberties(self, added_stone=None):
         """Updates the liberties of the entire board, group by group.
@@ -69,6 +97,7 @@ class Board(go.Board):
         if added_stone:
             added_stone.group.update_liberties()
 
+    # Kiểm tra nước đi có hợp lệ
     def is_valid_move(self, move):
         x, y = move
         return 1 <= x <= self.size and 1 <= y <= self.size and not self.search(point=move)
@@ -83,11 +112,9 @@ class Board(go.Board):
             text_rect = text.get_rect(center=(220, 150))
             pygame.display.get_surface().blit(text, text_rect)
             pygame.display.flip()
-            pygame.time.delay(3000)  # Display the popup for 3 seconds
+            pygame.time.delay(5000)  # Display the popup for 5 seconds
             exit()
-
         return game_over
-
 
 class Human:
     def __init__(self, board, color):
@@ -103,8 +130,8 @@ class Human:
                 stone.remove()
             else:
                 added_stone = Stone(board, (x, y), BLACK)
-                self.board.update_liberties(added_stone)
-
+                print("Human move: " + str(added_stone))
+                self.board.update_liberties(added_stone)  
 
 class Computer:
     def __init__(self, board, color):
@@ -116,6 +143,7 @@ class Computer:
         if legal_moves:
             move = random.choice(legal_moves)
             added_computer_stone = Stone(self.board, move, self.color)
+            print("AI move: " + str(added_computer_stone))
             board.update_liberties(added_computer_stone)
 
     def get_legal_moves(self):
@@ -125,32 +153,34 @@ class Computer:
                 if self.board.is_valid_move((i, j)):
                     legal_moves.append((i, j))
         return legal_moves
-    
 
 def main():
+
+    clock = pygame.time.Clock()
+
     human_player = Human(board, BLACK)
     computer_player = Computer(board, WHITE)
-
-    currentP = computer_player
+    currentP = human_player
     while True:
-        pygame.time.wait(300)
+        clock.tick(FPS)
+
+        pygame.time.wait(250)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 exit()
-            if not board.is_game_over():   
+            if not board.is_game_over():
                 if(currentP == human_player):
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         human_player.make_move(event)
                         currentP = computer_player
                 else:
+                    #pygame.time.wait(500)
                     computer_player.make_move()
                     currentP = human_player
 
-    
-
 if __name__ == '__main__':
     pygame.init()
-    pygame.display.set_caption('Cờ Vây')
+    pygame.display.set_caption('Cờ vây')
     screen = pygame.display.set_mode(BOARD_SIZE, 0, 32)
     background = pygame.image.load(BACKGROUND).convert()
     board = Board()

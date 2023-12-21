@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+"""Go library made with pure Python.
+
+This library offers a variety of Go related classes and methods.
+
+There is a companion module called 'goban' which serves as a front-end
+for this library, forming a fully working go board together.
+
+"""
+
+
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
@@ -62,8 +75,8 @@ class Stone(object):
             return groups[0]
 
     def __str__(self):
-        """Return the location of the stone, e.g. 'D17'."""
-        return 'ABCDEFGHJ'[self.point[0]-1] + str(9-(self.point[1]))
+        """Return the location of the stone, e.g. 'D1'."""
+        return 'ABCDEFGHJ'[self.point[0]-1] + str((self.point[1]))
 
 
 class Group(object):
@@ -78,10 +91,7 @@ class Group(object):
         self.board = board
         self.board.groups.append(self)
         self.stones = [stone]
-        self.liberties = set()
-
-    def add_stone(self, stone):
-        self.stones.append(stone)
+        self.liberties = None
 
     def merge(self, group):
         """Merge two groups.
